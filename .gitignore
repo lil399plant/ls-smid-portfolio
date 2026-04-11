@@ -28,3 +28,9 @@ secrets.py
 # IDE
 .vscode/
 .idea/
+
+# OpenBB local app folder (conda env — never commit this)
+OpenBB/
+
+# Ruff cache
+.ruff_cache/
