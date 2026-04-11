@@ -30,6 +30,7 @@ _credentials = {
     "benzinga_api_key":         os.getenv("OPENBB_BENZINGA_API_KEY"),
 
     # Prices & market data
+    "nasdaq_api_key":           os.getenv("OPENBB_NASDAQ_API_KEY"),
     "polygon_api_key":          os.getenv("OPENBB_POLYGON_API_KEY"),
     "alpha_vantage_api_key":    os.getenv("OPENBB_ALPHA_VANTAGE_API_KEY"),
 
