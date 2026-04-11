@@ -26,6 +26,17 @@ PROCESSED = Path(__file__).resolve().parent / "processed"
 PROCESSED.mkdir(exist_ok=True)
 
 
+def _to_df(result) -> pd.DataFrame:
+    """Handle both OBBject (.to_df()) and plain DataFrame outputs."""
+    if result is None:
+        return pd.DataFrame()
+    if hasattr(result, "to_df"):
+        return result.to_df()
+    if isinstance(result, pd.DataFrame):
+        return result
+    return pd.DataFrame()
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # OPENBB PULLS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -33,48 +44,68 @@ PROCESSED.mkdir(exist_ok=True)
 def obb_pull_profiles(tickers: list[str]) -> pd.DataFrame:
     rows = []
     for t in tickers:
-        try:
-            r = obb.equity.profile(t, provider="fmp").to_df()
-            r["ticker"] = t
-            rows.append(r)
-        except Exception as e:
-            print(f"    [OBB WARN] profile {t}: {e}")
+        for provider in ("yfinance", "fmp"):  # yfinance is free, no tier limit
+            try:
+                r = _to_df(obb.equity.profile(t, provider=provider))
+                if not r.empty:
+                    r["ticker"] = t
+                    rows.append(r)
+                    break
+            except Exception:
+                continue
+        else:
+            print(f"    [OBB WARN] profile {t}: all providers failed")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
 
 
 def obb_pull_fundamentals(tickers: list[str]) -> pd.DataFrame:
     rows = []
     for t in tickers:
-        try:
-            r = obb.equity.fundamental.ratios(t, provider="fmp", limit=1).to_df()
-            r["ticker"] = t
-            rows.append(r)
-        except Exception as e:
-            print(f"    [OBB WARN] fundamentals {t}: {e}")
+        for provider in ("yfinance", "fmp"):
+            try:
+                r = _to_df(obb.equity.fundamental.ratios(t, provider=provider, limit=1))
+                if not r.empty:
+                    r["ticker"] = t
+                    rows.append(r)
+                    break
+            except Exception:
+                continue
+        else:
+            print(f"    [OBB WARN] fundamentals {t}: all providers failed")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
 
 
 def obb_pull_metrics(tickers: list[str]) -> pd.DataFrame:
     rows = []
     for t in tickers:
-        try:
-            m = obb.equity.fundamental.metrics(t, provider="fmp", limit=1).to_df()
-            m["ticker"] = t
-            rows.append(m)
-        except Exception as e:
-            print(f"    [OBB WARN] metrics {t}: {e}")
+        for provider in ("yfinance", "fmp"):
+            try:
+                m = _to_df(obb.equity.fundamental.metrics(t, provider=provider, limit=1))
+                if not m.empty:
+                    m["ticker"] = t
+                    rows.append(m)
+                    break
+            except Exception:
+                continue
+        else:
+            print(f"    [OBB WARN] metrics {t}: all providers failed")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
 
 
 def obb_pull_prices(tickers: list[str], start: str = "2022-01-01") -> pd.DataFrame:
     rows = []
     for t in tickers:
-        try:
-            p = obb.equity.price.historical(t, start_date=start, provider="fmp").to_df()
-            p["ticker"] = t
-            rows.append(p)
-        except Exception as e:
-            print(f"    [OBB WARN] prices {t}: {e}")
+        for provider in ("yfinance", "alpha_vantage", "fmp"):
+            try:
+                p = _to_df(obb.equity.price.historical(t, start_date=start, provider=provider))
+                if not p.empty:
+                    p["ticker"] = t
+                    rows.append(p)
+                    break
+            except Exception:
+                continue
+        else:
+            print(f"    [OBB WARN] prices {t}: all providers failed")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
 
 
@@ -89,8 +120,9 @@ def obb_pull_macro() -> pd.DataFrame:
     frames = {}
     for name, fred_id in series.items():
         try:
-            df = obb.economy.fred_series(fred_id, provider="fred").to_df()
-            frames[name] = df["value"]
+            df = _to_df(obb.economy.fred_series(fred_id, provider="fred"))
+            if not df.empty and "value" in df.columns:
+                frames[name] = df["value"]
         except Exception as e:
             print(f"    [OBB WARN] FRED {fred_id}: {e}")
     return pd.DataFrame(frames) if frames else pd.DataFrame()
@@ -100,9 +132,10 @@ def obb_pull_news(tickers: list[str]) -> pd.DataFrame:
     rows = []
     for t in tickers:
         try:
-            n = obb.news.company(t, provider="benzinga", limit=20).to_df()
-            n["ticker"] = t
-            rows.append(n)
+            n = _to_df(obb.news.company(t, provider="benzinga", limit=20))
+            if not n.empty:
+                n["ticker"] = t
+                rows.append(n)
         except Exception as e:
             print(f"    [OBB WARN] news {t}: {e}")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
@@ -112,9 +145,10 @@ def obb_pull_insider_trades(tickers: list[str]) -> pd.DataFrame:
     rows = []
     for t in tickers:
         try:
-            ins = obb.equity.ownership.insider_trading(t, provider="fmp", limit=20).to_df()
-            ins["ticker"] = t
-            rows.append(ins)
+            ins = _to_df(obb.equity.ownership.insider_trading(t, provider="fmp", limit=20))
+            if not ins.empty:
+                ins["ticker"] = t
+                rows.append(ins)
         except Exception as e:
             print(f"    [OBB WARN] insider trades {t}: {e}")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
@@ -124,9 +158,10 @@ def obb_pull_congressional_trades(tickers: list[str]) -> pd.DataFrame:
     rows = []
     for t in tickers:
         try:
-            c = obb.equity.ownership.government_trades(t, provider="quiverquant").to_df()
-            c["ticker"] = t
-            rows.append(c)
+            c = _to_df(obb.equity.ownership.government_trades(t, provider="quiverquant"))
+            if not c.empty:
+                c["ticker"] = t
+                rows.append(c)
         except Exception as e:
             print(f"    [OBB WARN] congressional trades {t}: {e}")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
