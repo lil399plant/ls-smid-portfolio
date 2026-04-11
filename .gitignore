@@ -24,6 +24,7 @@ secrets.py
 
 # macOS
 .DS_Store
+Icon\r
 
 # IDE
 .vscode/
