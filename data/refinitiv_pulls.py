@@ -53,11 +53,23 @@ def _get_data(rics: list[str], fields: dict) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
+# Known NYSE-listed tickers that need .N instead of the NASDAQ .O default.
+# Add tickers here when Refinitiv returns "Unable to resolve identifier" errors.
+_RIC_OVERRIDES = {
+    "SWX":  "SWX.N",
+    "LBRT": "LBRT.N",
+    "RBC":  "RBC.N",
+    "GS":   "GS.N",
+    "WCC":  "WCC.N",
+    "PINS": "PINS.N",
+    "CHGG": "CHGG.N",
+}
+
 def _ticker_to_ric(ticker: str) -> str:
     ticker = ticker.upper().strip()
     if "." in ticker:
         return ticker
-    return f"{ticker}.O"  # default to NASDAQ
+    return _RIC_OVERRIDES.get(ticker, f"{ticker}.O")
 
 
 def _to_rics(tickers: list[str]) -> list[str]:
@@ -72,7 +84,7 @@ def pull_value(tickers: list[str]) -> pd.DataFrame:
         "TR.EVtoEBITDA":        "ev_ebitda",
         "TR.PriceToCFPerShare": "p_fcf",
         "TR.PriceToBookValue":  "p_b",
-        "TR.PEMean":            "pe_ratio",
+        "TR.PricePERatio":      "pe_ratio",
     })
 
 

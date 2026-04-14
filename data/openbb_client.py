@@ -11,8 +11,23 @@ Usage:
 """
 
 import os
+import ssl
+import certifi
 from pathlib import Path
 from dotenv import load_dotenv
+
+# ── SSL fix: point aiohttp to certifi's bundle before any network code loads.
+# Homebrew Python's default SSL path (/opt/homebrew/etc/openssl@3/cert.pem)
+# is often missing, which breaks aiohttp certificate verification.
+os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+os.environ.setdefault("REQUESTS_CA_BUNDLE", certifi.where())
+
+_original_create_default_context = ssl.create_default_context
+def _certifi_ssl_context(*args, **kwargs):
+    kwargs.setdefault("cafile", certifi.where())
+    return _original_create_default_context(*args, **kwargs)
+ssl.create_default_context = _certifi_ssl_context
+
 from openbb import obb
 
 # Load .env from repo root (works regardless of where the script is run from)
